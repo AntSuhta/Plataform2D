@@ -1,3 +1,4 @@
+using JetBrains.Annotations;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
@@ -19,6 +20,12 @@ public class Player : MonoBehaviour
     public Transform point;
     public float radius;
     private bool isAttacking;
+    public LayerMask layerEnemy;
+    public int damage;
+
+    [Header("Status//HP")]
+    public float health;
+    bool recovery;
 
     Rigidbody2D rig;
     void Start()
@@ -95,11 +102,11 @@ public class Player : MonoBehaviour
         {
             isAttacking = true;
             anim.SetInteger("Transition", 3);
-            Collider2D hit = Physics2D.OverlapCircle(point.position, radius);
+            Collider2D hit = Physics2D.OverlapCircle(point.position, radius, layerEnemy);
 
             if (hit != null)
             {
-                Debug.Log(hit.name);
+                hit.GetComponent<GoblinWithRaycast>().OnHit(damage);
             }
 
             StartCoroutine(OnAttack());
@@ -113,7 +120,26 @@ public class Player : MonoBehaviour
         isAttacking = false;
     }
 
+    float recoveryCount;
+    public float recoveryTime;
+    public void OnHit(int dmg)
+    {
+        recoveryCount += Time.deltaTime;
+        if (recoveryCount >= recoveryTime) 
+        {
 
+            anim.SetTrigger("takeDamage");
+            health -= dmg;
+            recoveryCount = 0f;
+        }
+
+        if (health <= 0)
+        {
+            anim.SetTrigger("death");
+            Destroy(gameObject, 1f);
+        }
+    }
+    
     void OnDrawGizmos()
     {
     
@@ -130,4 +156,15 @@ public class Player : MonoBehaviour
             doubleJump = false;
         }
     }
+
+    private void OnTriggerEnter2D(Collider2D collision)
+    {
+        if (collision.CompareTag("Coin"))
+        {
+            collision.GetComponent<Animator>().SetTrigger("hitCoin");
+            GameController.instance.GetCoin();
+            Destroy(collision.gameObject, 1f);
+        }
+    }
+
 }
